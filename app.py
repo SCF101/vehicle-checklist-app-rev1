@@ -4,48 +4,65 @@ import json
 from datetime import datetime
 
 app = Flask(__name__)
+SUBMISSIONS_DIR = "submissions"
+os.makedirs(SUBMISSIONS_DIR, exist_ok=True)
 
 FORM_TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
     <title>Vehicle Checklist</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h2 { color: #2c3e50; }
+        label { display: block; margin-top: 10px; }
+        input[type="text"], textarea { width: 100%%; padding: 8px; margin-top: 5px; }
+        .checkbox-group { margin-top: 10px; }
+        .checkbox-group label { display: block; }
+        button { margin-top: 20px; padding: 10px 20px; }
+    </style>
 </head>
 <body>
-    <h1>Daily Vehicle Checklist</h1>
+    <h2>Daily Vehicle Checklist</h2>
     <form method="POST">
-        <h2>Driver Information</h2>
-        Name: <input type="text" name="name"><br>
-        Date: <input type="date" name="date"><br>
-        Vehicle Registration Number: <input type="text" name="vehicle_reg"><br>
-        Odometer Reading: <input type="text" name="odometer"><br>
+        <label>Full Name: <input type="text" name="full_name" required></label>
+        <label>Date: <input type="text" name="date" required></label>
+        <label>Vehicle Registration Number: <input type="text" name="vehicle_reg" required></label>
+        <label>Odometer Reading: <input type="text" name="odometer" required></label>
 
-        <h2>Exterior Checks</h2>
-        {% for item in exterior %}
-            <input type="checkbox" name="exterior" value="{{ item }}"> {{ item }}<br>
-        {% endfor %}
+        <h3>Exterior Checks</h3>
+        <div class="checkbox-group">
+            {% for item in exterior_checks %}
+                <label><input type="checkbox" name="exterior_checks" value="{{ item }}"> {{ item }}</label>
+            {% endfor %}
+        </div>
 
-        <h2>Interior Checks</h2>
-        {% for item in interior %}
-            <input type="checkbox" name="interior" value="{{ item }}"> {{ item }}<br>
-        {% endfor %}
+        <h3>Interior Checks</h3>
+        <div class="checkbox-group">
+            {% for item in interior_checks %}
+                <label><input type="checkbox" name="interior_checks" value="{{ item }}"> {{ item }}</label>
+            {% endfor %}
+        </div>
 
-        <h2>Under the Hood</h2>
-        {% for item in hood %}
-            <input type="checkbox" name="hood" value="{{ item }}"> {{ item }}<br>
-        {% endfor %}
+        <h3>Under the Hood</h3>
+        <div class="checkbox-group">
+            {% for item in under_hood_checks %}
+                <label><input type="checkbox" name="under_hood_checks" value="{{ item }}"> {{ item }}</label>
+            {% endfor %}
+        </div>
 
-        <h2>Safety Equipment</h2>
-        {% for item in safety %}
-            <input type="checkbox" name="safety" value="{{ item }}"> {{ item }}<br>
-        {% endfor %}
+        <h3>Safety Equipment</h3>
+        <div class="checkbox-group">
+            {% for item in safety_equipment %}
+                <label><input type="checkbox" name="safety_equipment" value="{{ item }}"> {{ item }}</label>
+            {% endfor %}
+        </div>
 
-        <h2>Additional Notes</h2>
-        Issues Found: <textarea name="issues"></textarea><br>
-        Action Taken: <textarea name="action"></textarea><br>
-        Signature: <input type="text" name="signature"><br>
+        <label>Any issues found:<textarea name="issues_found"></textarea></label>
+        <label>Action taken:<textarea name="action_taken"></textarea></label>
+        <label>Signature: <input type="text" name="signature" required></label>
 
-        <input type="submit" value="Submit">
+        <button type="submit">Submit Checklist</button>
     </form>
 </body>
 </html>
@@ -55,30 +72,35 @@ FORM_TEMPLATE = """
 def checklist():
     if request.method == "POST":
         data = {
-            "name": request.form.get("name"),
+            "full_name": request.form.get("full_name"),
             "date": request.form.get("date"),
             "vehicle_reg": request.form.get("vehicle_reg"),
             "odometer": request.form.get("odometer"),
-            "exterior": request.form.getlist("exterior"),
-            "interior": request.form.getlist("interior"),
-            "hood": request.form.getlist("hood"),
-            "safety": request.form.getlist("safety"),
-            "issues": request.form.get("issues"),
-            "action": request.form.get("action"),
+            "exterior_checks": request.form.getlist("exterior_checks"),
+            "interior_checks": request.form.getlist("interior_checks"),
+            "under_hood_checks": request.form.getlist("under_hood_checks"),
+            "safety_equipment": request.form.getlist("safety_equipment"),
+            "issues_found": request.form.get("issues_found"),
+            "action_taken": request.form.get("action_taken"),
             "signature": request.form.get("signature")
         }
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"submissions/checklist_{timestamp}.json"
-        with open(filename, "w") as f:
+        filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{data['vehicle_reg']}.json"
+        with open(os.path.join(SUBMISSIONS_DIR, filename), "w") as f:
             json.dump(data, f, indent=4)
         return redirect("/")
     
     return render_template_string(FORM_TEMPLATE,
-        exterior=["Tyres", "Lights", "Mirrors", "Windshield & Windows", "Wipers & Washer Fluid", "Body Damage", "License Plates"],
-        interior=["Seatbelts", "Dashboard Warning Lights", "Horn", "Air Conditioning / Heater", "Cleanliness"],
-        hood=["Engine Oil Level", "Coolant Level", "Brake Fluid Level", "Battery Condition", "Belts & Hoses"],
-        safety=["Fire Extinguisher", "First Aid Kit", "Emergency Triangle", "Spare Tyre & Jack"]
+        exterior_checks=[
+            "Tyres", "Lights", "Mirrors", "Windshield & Windows", "Wipers & Washer Fluid",
+            "Body Damage", "License Plates"
+        ],
+        interior_checks=[
+            "Seatbelts", "Dashboard Warning Lights", "Horn", "Air Conditioning / Heater", "Cleanliness"
+        ],
+        under_hood_checks=[
+            "Engine Oil Level", "Coolant Level", "Brake Fluid Level", "Battery Condition", "Belts & Hoses"
+        ],
+        safety_equipment=[
+            "Fire Extinguisher", "First Aid Kit", "Emergency Triangle", "Spare Tyre & Jack"
+        ]
     )
-
-if __name__ == "__main__":
-    app.run(debug=True)
